@@ -17,8 +17,9 @@ class objectpool
 		size_t _objNum;			//表示内存对象的个数
 		//进行内存块的初始化
 		BlockNode(size_t objnum)
-			:_memory(NULL)
+			: _next(NULL)
 			, _objNum(objnum)
+			
 		{
 			_memory = malloc(_itemsize*objnum);
 		}
@@ -28,6 +29,7 @@ class objectpool
 			free(_memory);
 			_memory = NULL;
 			_next = NULL;
+			_objNum = 0;
 		}
 	};
 public:
@@ -46,6 +48,7 @@ public:
 	{
 		Destory();
 		_first = _last = NULL;
+
 
 
 		////当把所有的内存块进行释放以后，这个时候_lastdelete不允许还链有内存块
@@ -77,7 +80,7 @@ public:
 			T* obj = _lastDelete;
 			 //强转为T**，然后解引用。这里解决了32位程序和64为程序的限制，T**直接取到了正确的地址内容。
 			_lastDelete = *((T**)_lastDelete);
-			_countin++;
+
 			return new(obj)T;
 		}
 
@@ -85,14 +88,14 @@ public:
 		//当BlockNode满了的时候，这个时候就需要去到下一个BlockNode去构造对象。
 		if (_countin == _last->_objNum)
 		{
-			size_t newNodeNum = _last->_objNum * 2;			/
+			size_t newNodeNum = _last->_objNum * 2;			
 			if (newNodeNum >= _Maximum)
 				newNodeNum = _Maximum;
 			_last->_next = new BlockNode(newNodeNum);
 			if (_last->_next == NULL)
 				cout << "内存开辟失败" << endl;
+			_last = _last->_next; 
 			_countin = 0;
-			_last = _last->_next;
 		}
 
 		//在memory上剩余的位置进行构造
@@ -106,9 +109,10 @@ public:
 	void  Delete(T* ptr)
 	{
 		//先调用析构函数，然后把要析构的对象的内存块返回到内存池当中，也就是头插入自由链表_lastdelete中。
-		ptr->~T();
+		
 		if (ptr)
 		{
+			ptr->~T();
 			*(T**)ptr = _lastDelete;
 			_lastDelete = ptr;
 		}
@@ -127,7 +131,7 @@ private:
 template<class T>
  size_t objectpool<T>::IninItemSize()
 {
-	//BlockNode中存储了void* 的一个指针，所以第低限度你要开出来一个能存放void*的指针的大小的对象空间。
+	//BlockNode中存储了void* 的一个指针，所以最低限度你要开出来一个能存放void*的指针的大小的对象空间。
 	if (sizeof(T) <= sizeof(void*))
 		return sizeof(void*);
 	else
